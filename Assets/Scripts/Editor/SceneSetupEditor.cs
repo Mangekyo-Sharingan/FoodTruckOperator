@@ -124,6 +124,14 @@ public static class SceneSetupEditor
     {
         var cityGO = new GameObject("City");
         cityGO.AddComponent<CityBuilder>().Build();
+        SetupNavMesh(cityGO);
+    }
+
+    static void SetupNavMesh(GameObject cityGO)
+    {
+        var surface = cityGO.AddComponent<UnityEngine.AI.NavMeshSurface>();
+        surface.BuildNavMesh();
+        Debug.Log("[SceneSetup] NavMesh baked");
     }
 
     // ── Player ────────────────────────────────────────────────────────────
@@ -160,162 +168,322 @@ public static class SceneSetupEditor
         ia.interactRadius = 2.5f;
     }
 
-    // ── Food Truck ────────────────────────────────────────────────────────
-    // Truck parked on the road, 2 cells ahead of the player start.
-    // Player starts at z=55, so put the truck at z=42 (facing +Z).
+    // ── Food Truck (HD Low-Poly) ─────────────────────────────────────────
     //
-    // Truck is front-facing +Z:
-    //   Cab   at local z = +3.25 (front)
-    //   Body  at local z = -1.5  (back)
-    //   Total length ≈ 10 m
+    // Exterior built from ~75 primitives with visible panel lines, trim,
+    // chrome details, headlights, grille, mirrors, fenders, awning, etc.
     //
-    // Serving window on the right side (local +X), facing +X.
+    // Local +Z = cab (forward), −Z = cargo rear (entry door).
+    // Serving window on right side (+X).
+    // Approx 10 m long, 3.4 m wide, 3.0 m tall.
 
     static GameObject SetupFoodTruck()
     {
-        var truckColor = new Color(0.95f, 0.70f, 0.10f);  // bright yellow
-        var cabColor   = new Color(0.92f, 0.65f, 0.10f);
-        var wheelColor = new Color(0.15f, 0.15f, 0.15f);
-        var windowColor= new Color(0.55f, 0.75f, 0.85f);
-        var metalColor = new Color(0.55f, 0.55f, 0.55f);
+        // ── Materials ────────────────────────────────────────────────────
+        Material bodyMat      = MakeMat("TruckBody",     new Color(0.95f, 0.70f, 0.10f), 0.30f);
+        Material bodyAccent   = MakeMat("TruckAccent",   new Color(0.82f, 0.58f, 0.08f), 0.25f);
+        Material cabMat       = MakeMat("TruckCab",      new Color(0.92f, 0.65f, 0.10f), 0.28f);
+        Material wheelMat     = MakeMat("TruckWheel",    new Color(0.10f, 0.10f, 0.10f), 0.40f);
+        Material windowMat    = MakeMat("TruckWindow",   new Color(0.55f, 0.78f, 0.90f), 0.92f);
+        Material metalMat     = MakeMat("TruckMetal",    new Color(0.60f, 0.60f, 0.62f), 0.75f);
+        Material chromeMat    = MakeMat("TruckChrome",   new Color(0.82f, 0.82f, 0.85f), 0.92f);
+        Material trimMat      = MakeMat("TruckTrim",     new Color(0.25f, 0.25f, 0.27f), 0.55f);
+        Material headlightMat = MakeMat("Headlight",     new Color(1.0f,  0.97f, 0.85f), 0.95f);
+        Material taillightMat = MakeMat("Taillight",     new Color(0.90f, 0.05f, 0.05f), 0.70f);
+        Material indicatorMat = MakeMat("Indicator",     new Color(1.0f,  0.60f, 0.05f), 0.75f);
+        Material awningMat    = MakeMat("Awning",        new Color(0.85f, 0.18f, 0.10f), 0.15f);
+        Material stepMat      = MakeMat("Step",          new Color(0.38f, 0.38f, 0.40f), 0.50f);
 
-        Material truckMat  = MakeMat("TruckBody",   truckColor,  0.3f);
-        Material cabMat    = MakeMat("TruckCab",    cabColor,    0.25f);
-        Material wheelMat  = MakeMat("TruckWheel",  wheelColor,  0.6f);
-        Material windowMat = MakeMat("TruckWindow", windowColor, 0.9f);
-        Material metalMat  = MakeMat("TruckMetal",  metalColor,  0.7f);
-        Material interiorMat = MakeMat("TruckInterior", new Color(0.88f, 0.84f, 0.78f), 0.1f);
-        Material awningMat = MakeMat("TruckAwning", new Color(0.85f, 0.18f, 0.10f), 0.15f);
-
-        // ── Root ──────────────────────────────────────────────────────────
+        // ── Root + physics ──────────────────────────────────────────────
         var root = new GameObject("FoodTruck");
         root.transform.position = new Vector3(3f, 0f, 42f);
-        // Face -Z so serving window (right side = +X) faces the player walking from z=55
         root.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
 
         var truck   = root.AddComponent<FoodTruck>();
         var driving = root.AddComponent<FoodTruckDriving>();
 
-        // ── Main collider box ─────────────────────────────────────────────
         var bodyCol = root.AddComponent<BoxCollider>();
         bodyCol.center = new Vector3(0f, 1.5f, 0f);
         bodyCol.size   = new Vector3(3.6f, 3.0f, 10.0f);
 
-        // Rigidbody is auto-added by [RequireComponent] on FoodTruckDriving
         var rb = root.GetComponent<Rigidbody>() ?? root.AddComponent<Rigidbody>();
-        rb.mass = 1500f;
+        rb.mass          = 1500f;
         rb.linearDamping = 2f;
         rb.angularDamping = 8f;
-        rb.constraints = RigidbodyConstraints.FreezeRotationX
-                       | RigidbodyConstraints.FreezeRotationZ
-                       | RigidbodyConstraints.FreezePositionY;
-        rb.isKinematic = true;
+        rb.constraints   = RigidbodyConstraints.FreezeRotationX
+                         | RigidbodyConstraints.FreezeRotationZ
+                         | RigidbodyConstraints.FreezePositionY;
+        rb.isKinematic   = true;
 
-        // ── Exterior Visual ───────────────────────────────────────────────
         var ext = new GameObject("Exterior");
         ext.transform.SetParent(root.transform);
         ext.transform.localPosition = Vector3.zero;
 
-        // Cargo body (rear 3/4 of truck)
-        MakePart("CargoBody", ext.transform,
-            new Vector3(0f, 1.65f, -1.3f), new Vector3(3.4f, 2.7f, 7.0f), truckMat);
+        // ═══════════════════════════════════════════════════════════════
+        //  CARGO BODY — z from −4.5 to +1.8
+        // ═══════════════════════════════════════════════════════════════
 
-        // Cab (front)
-        MakePart("Cab", ext.transform,
-            new Vector3(0f, 1.55f, 3.3f), new Vector3(3.4f, 2.5f, 3.4f), cabMat);
+        // ── Left side panels ──
+        MakePart("CargoLeftLower", ext.transform,
+            new Vector3(-1.68f, 1.0f, -1.35f), new Vector3(0.06f, 1.40f, 6.30f), bodyMat);
+        MakePart("CargoLeftUpper", ext.transform,
+            new Vector3(-1.68f, 2.35f, -1.35f), new Vector3(0.06f, 1.30f, 6.30f), bodyMat);
+        MakePart("CargoLeftTrim", ext.transform,
+            new Vector3(-1.69f, 1.72f, -1.35f), new Vector3(0.04f, 0.06f, 6.30f), trimMat);
+        MakePart("CargoLeftAccent", ext.transform,
+            new Vector3(-1.69f, 0.32f, -1.35f), new Vector3(0.04f, 0.04f, 6.30f), bodyAccent);
 
-        // Windshield
-        MakePart("Windshield", ext.transform,
-            new Vector3(0f, 2.0f, 4.95f), new Vector3(2.6f, 1.2f, 0.08f), windowMat);
+        // ── Right side panels — split around serving window ──
+        MakePart("CargoRightLower", ext.transform,
+            new Vector3(1.68f, 1.0f, -1.35f), new Vector3(0.06f, 1.40f, 6.30f), bodyMat);
+        MakePart("CargoRightUpperRear", ext.transform,
+            new Vector3(1.68f, 2.35f, -3.0f), new Vector3(0.06f, 1.30f, 3.00f), bodyMat);
+        MakePart("CargoRightUpperFront", ext.transform,
+            new Vector3(1.68f, 2.35f, 0.8f), new Vector3(0.06f, 1.30f, 2.00f), bodyMat);
+        MakePart("CargoRightTrim", ext.transform,
+            new Vector3(1.69f, 1.72f, -1.35f), new Vector3(0.04f, 0.06f, 6.30f), trimMat);
+        MakePart("CargoRightAccent", ext.transform,
+            new Vector3(1.69f, 0.32f, -1.35f), new Vector3(0.04f, 0.04f, 6.30f), bodyAccent);
 
-        // Cab side windows
-        MakePart("WindowL", ext.transform,
-            new Vector3(-1.72f, 1.95f, 3.7f), new Vector3(0.08f, 1.0f, 1.8f), windowMat);
-        MakePart("WindowR", ext.transform,
-            new Vector3( 1.72f, 1.95f, 3.7f), new Vector3(0.08f, 1.0f, 1.8f), windowMat);
+        // ── Serving window area ──
+        MakePart("WindowHeader", ext.transform,
+            new Vector3(1.68f, 2.72f, -0.8f), new Vector3(0.06f, 0.56f, 2.60f), bodyMat);
+        MakePart("WindowFrameTop", ext.transform,
+            new Vector3(1.70f, 2.48f, -0.8f), new Vector3(0.04f, 0.06f, 2.50f), chromeMat);
+        MakePart("WindowFrameBot", ext.transform,
+            new Vector3(1.70f, 1.72f, -0.8f), new Vector3(0.04f, 0.06f, 2.50f), chromeMat);
+        MakePart("WindowFrameL", ext.transform,
+            new Vector3(1.70f, 2.10f, -2.03f), new Vector3(0.04f, 0.82f, 0.06f), chromeMat);
+        MakePart("WindowFrameR", ext.transform,
+            new Vector3(1.70f, 2.10f, 0.43f), new Vector3(0.04f, 0.82f, 0.06f), chromeMat);
+        MakePart("WindowLedge", ext.transform,
+            new Vector3(1.85f, 1.72f, -0.8f), new Vector3(0.30f, 0.06f, 2.40f), metalMat);
 
-        // Serving window frame (right side of cargo body)
-        MakePart("ServingWindowFrame", ext.transform,
-            new Vector3(1.71f, 2.0f, -0.8f), new Vector3(0.08f, 1.2f, 2.6f), metalMat);
-
-        // Hatch: pivot sits at the top edge of the window; panel hangs down from it.
-        // Rotating the pivot around local Z swings the panel outward like an awning.
+        // Hatch — pivot at top edge of window, panel hangs down
         var hatchPivotGO = new GameObject("ServingHatchPivot");
         hatchPivotGO.transform.SetParent(ext.transform);
-        hatchPivotGO.transform.localPosition = new Vector3(1.74f, 2.62f, -0.8f);
+        hatchPivotGO.transform.localPosition = new Vector3(1.72f, 2.46f, -0.8f);
         hatchPivotGO.transform.localRotation = Quaternion.identity;
         hatchPivotGO.AddComponent<ServingHatch>();
         MakePart("HatchPanel", hatchPivotGO.transform,
-            new Vector3(0f, -0.525f, 0f), new Vector3(0.05f, 1.05f, 2.35f), windowMat);
+            new Vector3(0f, -0.37f, 0f), new Vector3(0.04f, 0.74f, 2.40f), windowMat);
 
-        // Awning over serving window
-        MakePart("Awning", ext.transform,
-            new Vector3(2.3f, 2.85f, -0.8f), new Vector3(1.3f, 0.12f, 2.8f), awningMat);
-        MakePart("AwningStripe1", ext.transform,
-            new Vector3(2.3f, 2.85f, -0.1f), new Vector3(1.3f, 0.13f, 0.15f), truckMat);
-        MakePart("AwningStripe2", ext.transform,
-            new Vector3(2.3f, 2.85f, -1.5f), new Vector3(1.3f, 0.13f, 0.15f), truckMat);
+        // ── Rear face ──
+        MakePart("CargoRear", ext.transform,
+            new Vector3(0f, 1.65f, -4.52f), new Vector3(3.30f, 2.70f, 0.06f), bodyMat);
+        MakePart("RearDoorFrameL", ext.transform,
+            new Vector3(-1.30f, 1.65f, -4.56f), new Vector3(0.08f, 2.60f, 0.04f), chromeMat);
+        MakePart("RearDoorFrameR", ext.transform,
+            new Vector3(1.30f, 1.65f, -4.56f), new Vector3(0.08f, 2.60f, 0.04f), chromeMat);
+        MakePart("RearDoorFrameTop", ext.transform,
+            new Vector3(0f, 2.96f, -4.56f), new Vector3(2.60f, 0.06f, 0.04f), chromeMat);
+        MakePart("RearDoorHandle", ext.transform,
+            new Vector3(0.05f, 1.50f, -4.58f), new Vector3(0.20f, 0.06f, 0.04f), chromeMat);
 
-        // Roof
-        MakePart("Roof", ext.transform,
-            new Vector3(0f, 3.02f, 0.5f), new Vector3(3.5f, 0.14f, 10.2f), metalMat);
+        // ── Cargo roof ──
+        MakePart("CargoRoof", ext.transform,
+            new Vector3(0f, 3.00f, -1.35f), new Vector3(3.42f, 0.08f, 6.40f), metalMat);
+        MakePart("RoofTrimFront", ext.transform,
+            new Vector3(0f, 3.04f, 1.50f), new Vector3(3.42f, 0.04f, 0.08f), trimMat);
+        MakePart("RoofTrimRear", ext.transform,
+            new Vector3(0f, 3.04f, -4.53f), new Vector3(3.42f, 0.04f, 0.06f), trimMat);
+        // AC unit
+        MakePart("ACUnit", ext.transform,
+            new Vector3(0f, 3.15f, -2.50f), new Vector3(1.00f, 0.30f, 0.80f), metalMat);
+        MakePart("ACVent", ext.transform,
+            new Vector3(0f, 3.32f, -2.50f), new Vector3(0.60f, 0.06f, 0.50f), trimMat);
 
-        // Bumpers
-        MakePart("FrontBumper", ext.transform,
-            new Vector3(0f, 0.5f, 5.1f), new Vector3(3.2f, 0.4f, 0.3f), metalMat);
-        MakePart("RearBumper", ext.transform,
-            new Vector3(0f, 0.5f, -4.9f), new Vector3(3.2f, 0.4f, 0.3f), metalMat);
-
-        // Underbody / chassis
+        // ── Cargo floor / chassis ──
+        MakePart("CargoFloorExt", ext.transform,
+            new Vector3(0f, 0.30f, -1.35f), new Vector3(3.30f, 0.06f, 6.30f), trimMat);
         MakePart("Chassis", ext.transform,
-            new Vector3(0f, 0.28f, 0.5f), new Vector3(3.0f, 0.3f, 9.6f), metalMat);
+            new Vector3(0f, 0.18f, 0f), new Vector3(2.80f, 0.20f, 9.20f), trimMat);
 
-        // Wheels (cylinders rotated 90° on X)
-        Transform wFL = MakeWheel("WheelFL", ext.transform, new Vector3(-1.6f, 0.38f,  3.0f), wheelMat);
-        Transform wFR = MakeWheel("WheelFR", ext.transform, new Vector3( 1.6f, 0.38f,  3.0f), wheelMat);
-        MakeWheel("WheelBL", ext.transform, new Vector3(-1.6f, 0.38f, -2.5f), wheelMat);
-        MakeWheel("WheelBR", ext.transform, new Vector3( 1.6f, 0.38f, -2.5f), wheelMat);
+        // ═══════════════════════════════════════════════════════════════
+        //  CAB — z from +1.8 to +4.95
+        // ═══════════════════════════════════════════════════════════════
 
+        MakePart("CabBodyL", ext.transform,
+            new Vector3(-1.62f, 1.50f, 3.35f), new Vector3(0.06f, 2.40f, 3.00f), cabMat);
+        MakePart("CabBodyR", ext.transform,
+            new Vector3(1.62f, 1.50f, 3.35f), new Vector3(0.06f, 2.40f, 3.00f), cabMat);
+        MakePart("CabRoof", ext.transform,
+            new Vector3(0f, 2.72f, 3.35f), new Vector3(3.30f, 0.06f, 3.00f), cabMat);
+
+        // Hood
+        MakePart("Hood", ext.transform,
+            new Vector3(0f, 1.00f, 4.60f), new Vector3(3.10f, 0.06f, 0.80f), cabMat);
+        MakePart("HoodFront", ext.transform,
+            new Vector3(0f, 0.80f, 4.96f), new Vector3(3.10f, 0.50f, 0.06f), cabMat);
+
+        // Grille
+        MakePart("Grille", ext.transform,
+            new Vector3(0f, 0.55f, 4.97f), new Vector3(2.40f, 0.50f, 0.04f), chromeMat);
+        MakePart("GrilleSlat1", ext.transform,
+            new Vector3(0f, 0.65f, 4.98f), new Vector3(2.20f, 0.04f, 0.02f), trimMat);
+        MakePart("GrilleSlat2", ext.transform,
+            new Vector3(0f, 0.50f, 4.98f), new Vector3(2.20f, 0.04f, 0.02f), trimMat);
+        MakePart("GrilleSlat3", ext.transform,
+            new Vector3(0f, 0.35f, 4.98f), new Vector3(2.20f, 0.04f, 0.02f), trimMat);
+
+        // Windshield + A-pillars
+        MakePart("Windshield", ext.transform,
+            new Vector3(0f, 2.00f, 4.85f), new Vector3(2.50f, 1.20f, 0.04f), windowMat);
+        MakePart("APillarL", ext.transform,
+            new Vector3(-1.32f, 2.00f, 4.85f), new Vector3(0.10f, 1.30f, 0.08f), trimMat);
+        MakePart("APillarR", ext.transform,
+            new Vector3(1.32f, 2.00f, 4.85f), new Vector3(0.10f, 1.30f, 0.08f), trimMat);
+
+        // Rear cab window
+        MakePart("RearCabWindow", ext.transform,
+            new Vector3(0f, 2.00f, 1.86f), new Vector3(2.00f, 0.90f, 0.04f), windowMat);
+
+        // Cab side windows + doors
+        MakePart("CabWindowL", ext.transform,
+            new Vector3(-1.64f, 2.00f, 3.80f), new Vector3(0.04f, 0.90f, 1.60f), windowMat);
+        MakePart("CabWindowR", ext.transform,
+            new Vector3(1.64f, 2.00f, 3.80f), new Vector3(0.04f, 0.90f, 1.60f), windowMat);
+        MakePart("DoorL", ext.transform,
+            new Vector3(-1.66f, 1.20f, 3.50f), new Vector3(0.02f, 1.40f, 2.20f), cabMat);
+        MakePart("DoorR", ext.transform,
+            new Vector3(1.66f, 1.20f, 3.50f), new Vector3(0.02f, 1.40f, 2.20f), cabMat);
+        MakePart("DoorHandleL", ext.transform,
+            new Vector3(-1.68f, 1.30f, 3.20f), new Vector3(0.04f, 0.06f, 0.20f), chromeMat);
+        MakePart("DoorHandleR", ext.transform,
+            new Vector3(1.68f, 1.30f, 3.20f), new Vector3(0.04f, 0.06f, 0.20f), chromeMat);
+
+        // Side mirrors
+        MakePart("MirrorArmL", ext.transform,
+            new Vector3(-1.85f, 1.90f, 4.50f), new Vector3(0.30f, 0.04f, 0.04f), trimMat);
+        MakePart("MirrorL", ext.transform,
+            new Vector3(-2.05f, 1.85f, 4.50f), new Vector3(0.04f, 0.20f, 0.16f), chromeMat);
+        MakePart("MirrorArmR", ext.transform,
+            new Vector3(1.85f, 1.90f, 4.50f), new Vector3(0.30f, 0.04f, 0.04f), trimMat);
+        MakePart("MirrorR", ext.transform,
+            new Vector3(2.05f, 1.85f, 4.50f), new Vector3(0.04f, 0.20f, 0.16f), chromeMat);
+
+        // Sun visor
+        MakePart("SunVisor", ext.transform,
+            new Vector3(0f, 2.70f, 4.92f), new Vector3(2.60f, 0.12f, 0.25f), trimMat);
+
+        // ═══════════════════════════════════════════════════════════════
+        //  WHEELS
+        // ═══════════════════════════════════════════════════════════════
+
+        Transform wFL = MakeWheel("WheelFL", ext.transform, new Vector3(-1.55f, 0.38f, 3.50f), wheelMat);
+        Transform wFR = MakeWheel("WheelFR", ext.transform, new Vector3(1.55f, 0.38f, 3.50f), wheelMat);
+        MakeWheel("WheelBL", ext.transform, new Vector3(-1.55f, 0.38f, -3.00f), wheelMat);
+        MakeWheel("WheelBR", ext.transform, new Vector3(1.55f, 0.38f, -3.00f), wheelMat);
         driving.wheelFL = wFL;
         driving.wheelFR = wFR;
 
-        // Remove colliders from all exterior visuals
+        // Fenders (above each wheel)
+        MakePart("FenderFL", ext.transform,
+            new Vector3(-1.68f, 0.65f, 3.50f), new Vector3(0.06f, 0.10f, 0.90f), trimMat);
+        MakePart("FenderFR", ext.transform,
+            new Vector3(1.68f, 0.65f, 3.50f), new Vector3(0.06f, 0.10f, 0.90f), trimMat);
+        MakePart("FenderBL", ext.transform,
+            new Vector3(-1.68f, 0.65f, -3.00f), new Vector3(0.06f, 0.10f, 0.90f), trimMat);
+        MakePart("FenderBR", ext.transform,
+            new Vector3(1.68f, 0.65f, -3.00f), new Vector3(0.06f, 0.10f, 0.90f), trimMat);
+
+        // ═══════════════════════════════════════════════════════════════
+        //  DETAILS
+        // ═══════════════════════════════════════════════════════════════
+
+        // Headlights + turn signals
+        MakePart("HeadlightL", ext.transform,
+            new Vector3(-1.15f, 0.85f, 4.98f), new Vector3(0.35f, 0.25f, 0.04f), headlightMat);
+        MakePart("HeadlightR", ext.transform,
+            new Vector3(1.15f, 0.85f, 4.98f), new Vector3(0.35f, 0.25f, 0.04f), headlightMat);
+        MakePart("TurnSignalFL", ext.transform,
+            new Vector3(-1.35f, 0.50f, 4.98f), new Vector3(0.18f, 0.10f, 0.04f), indicatorMat);
+        MakePart("TurnSignalFR", ext.transform,
+            new Vector3(1.35f, 0.50f, 4.98f), new Vector3(0.18f, 0.10f, 0.04f), indicatorMat);
+
+        // Taillights + rear indicators
+        MakePart("TaillightL", ext.transform,
+            new Vector3(-1.35f, 1.50f, -4.58f), new Vector3(0.25f, 0.50f, 0.04f), taillightMat);
+        MakePart("TaillightR", ext.transform,
+            new Vector3(1.35f, 1.50f, -4.58f), new Vector3(0.25f, 0.50f, 0.04f), taillightMat);
+        MakePart("RearIndicatorL", ext.transform,
+            new Vector3(-1.35f, 1.05f, -4.58f), new Vector3(0.25f, 0.18f, 0.04f), indicatorMat);
+        MakePart("RearIndicatorR", ext.transform,
+            new Vector3(1.35f, 1.05f, -4.58f), new Vector3(0.25f, 0.18f, 0.04f), indicatorMat);
+
+        // Bumpers
+        MakePart("FrontBumper", ext.transform,
+            new Vector3(0f, 0.35f, 5.00f), new Vector3(3.20f, 0.30f, 0.18f), chromeMat);
+        MakePart("FrontBumperLower", ext.transform,
+            new Vector3(0f, 0.15f, 5.00f), new Vector3(2.80f, 0.12f, 0.14f), trimMat);
+        MakePart("RearBumper", ext.transform,
+            new Vector3(0f, 0.40f, -4.68f), new Vector3(3.00f, 0.30f, 0.20f), chromeMat);
+
+        // Running board below serving window
+        MakePart("RunningBoard", ext.transform,
+            new Vector3(1.82f, 0.28f, -0.80f), new Vector3(0.30f, 0.06f, 2.80f), stepMat);
+        MakePart("RunBoardBracketF", ext.transform,
+            new Vector3(1.82f, 0.20f, 0.30f), new Vector3(0.20f, 0.12f, 0.08f), trimMat);
+        MakePart("RunBoardBracketR", ext.transform,
+            new Vector3(1.82f, 0.20f, -1.90f), new Vector3(0.20f, 0.12f, 0.08f), trimMat);
+
+        // Exhaust pipe
+        MakePart("Exhaust", ext.transform,
+            new Vector3(-1.0f, 0.18f, -4.80f), new Vector3(0.12f, 0.10f, 0.40f), trimMat);
+
+        // Awning over serving window
+        MakePart("Awning", ext.transform,
+            new Vector3(2.40f, 2.90f, -0.80f), new Vector3(1.50f, 0.10f, 2.80f), awningMat);
+        MakePart("AwningEdge", ext.transform,
+            new Vector3(2.40f, 2.86f, -0.80f), new Vector3(1.50f, 0.03f, 2.90f), trimMat);
+        MakePart("AwningStripe1", ext.transform,
+            new Vector3(2.40f, 2.91f, -0.15f), new Vector3(1.50f, 0.04f, 0.12f), bodyMat);
+        MakePart("AwningStripe2", ext.transform,
+            new Vector3(2.40f, 2.91f, -1.45f), new Vector3(1.50f, 0.04f, 0.12f), bodyMat);
+        MakePart("AwningSupportL", ext.transform,
+            new Vector3(2.00f, 2.50f, 0.50f), new Vector3(0.05f, 0.80f, 0.05f), metalMat);
+        MakePart("AwningSupportR", ext.transform,
+            new Vector3(2.00f, 2.50f, -2.10f), new Vector3(0.05f, 0.80f, 0.05f), metalMat);
+
+        // ── Remove colliders from all exterior visuals ───────────────
         foreach (var c in ext.GetComponentsInChildren<Collider>())
             Object.DestroyImmediate(c);
 
-        // ── Serving hatch interaction trigger (right side, doesn't rotate) ──
+        // ═══════════════════════════════════════════════════════════════
+        //  TRIGGERS & INTERACTION POINTS
+        // ═══════════════════════════════════════════════════════════════
+
+        // Serving hatch trigger (right side, doesn't rotate)
         var hatchTriggerGO = new GameObject("HatchTrigger");
         hatchTriggerGO.transform.SetParent(root.transform);
-        hatchTriggerGO.transform.localPosition = new Vector3(2.5f, 1.8f, -0.8f);
+        hatchTriggerGO.transform.localPosition = new Vector3(2.50f, 1.80f, -0.80f);
         var hatchTriggerCol = hatchTriggerGO.AddComponent<BoxCollider>();
-        hatchTriggerCol.size   = new Vector3(1.2f, 2.5f, 2.8f);
+        hatchTriggerCol.size   = new Vector3(1.20f, 2.50f, 2.80f);
         hatchTriggerCol.isTrigger = true;
         var hatchInteract = hatchTriggerGO.AddComponent<HatchInteract>();
-        // Wire hatch reference after ext hierarchy is built
         hatchInteract.hatch = ext.GetComponentInChildren<ServingHatch>();
 
-        // ── Exterior door trigger — spans the full rear face of the truck ────
-        // Truck rear is local z = -5.0 (world +Z from truck origin).
-        // Player approaches from world +Z, so this is directly in their path.
+        // Exterior entry trigger — rear face
         var doorTriggerGO = new GameObject("ExteriorDoorTrigger");
         doorTriggerGO.transform.SetParent(root.transform);
-        doorTriggerGO.transform.localPosition = new Vector3(0f, 1.5f, -5.3f);
+        doorTriggerGO.transform.localPosition = new Vector3(0f, 1.50f, -5.30f);
         var doorCol = doorTriggerGO.AddComponent<BoxCollider>();
-        doorCol.size = new Vector3(4.0f, 3.0f, 1.5f);   // wide zone across the rear
-        doorCol.isTrigger = true;
+        doorCol.size        = new Vector3(4.00f, 3.00f, 1.50f);
+        doorCol.isTrigger   = true;
         var doorInteract = doorTriggerGO.AddComponent<TruckExteriorDoor>();
-        doorInteract.truck = truck;
+        doorInteract.truck  = truck;
 
-        // ── Exterior door point — player exits to the side of the truck ──────
+        // Exit spawn (behind the truck)
         var extDoorPoint = new GameObject("ExteriorDoorPoint");
         extDoorPoint.transform.SetParent(root.transform);
-        extDoorPoint.transform.localPosition = new Vector3(2.5f, 0f, -2.2f);
+        extDoorPoint.transform.localPosition = new Vector3(0f, 0f, -5.80f);
+        extDoorPoint.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         truck.exteriorDoorPoint = extDoorPoint.transform;
 
-        // ── Camera target for driving ─────────────────────────────────────
+        // Camera target for driving
         var camTarget = new GameObject("CameraTarget");
         camTarget.transform.SetParent(root.transform);
-        camTarget.transform.localPosition = new Vector3(0f, 2.5f, 0f);
+        camTarget.transform.localPosition = new Vector3(0f, 2.50f, 0f);
         truck.cameraTarget = camTarget.transform;
 
         return root;
@@ -332,147 +500,249 @@ public static class SceneSetupEditor
         go.GetComponent<Renderer>().sharedMaterial = mat;
         Object.DestroyImmediate(go.GetComponent<Collider>());
 
-        // Hubcap
         var hub = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         hub.name = "Hub";
         hub.transform.SetParent(go.transform);
-        hub.transform.localPosition = new Vector3(0f, 0.7f, 0f);
-        hub.transform.localScale    = new Vector3(0.4f, 0.15f, 0.4f);
+        hub.transform.localPosition = new Vector3(0f, 0.70f, 0f);
+        hub.transform.localScale    = new Vector3(0.40f, 0.15f, 0.40f);
         hub.GetComponent<Renderer>().sharedMaterial =
-            MakeMat("WheelHub", new Color(0.75f, 0.75f, 0.75f), 0.8f);
+            MakeMat("WheelHub", new Color(0.75f, 0.75f, 0.75f), 0.80f);
         Object.DestroyImmediate(hub.GetComponent<Collider>());
 
         return go.transform;
     }
 
-    // ── Interior Room ─────────────────────────────────────────────────────
-    // Parented to the truck, positioned at local (0,0,-0.5) inside the cargo body.
-    // Dimensions kept within the truck's exterior 3.6 × 3.0 × 10.0 collider.
+    // ── Interior ──────────────────────────────────────────────────────────
+    //
+    // Two zones inside the truck, both parented to the truck root:
+    //   CARGO  z = −3.8 … +1.5  (empty, modular — equip added later)
+    //   CAB    z = +1.5 … +4.3  (driver + passenger seats, dashboard)
+    //
+    // A divider wall with a walk-through doorway separates them.
+    // The cargo rear (z = −3.8) is OPEN — the player enters/exits there.
+    // The right wall has a gap for the serving window.
 
     static GameObject SetupInteriorRoom(FoodTruck truck)
     {
-        const float IW = 2.8f;   // interior width  (X)  — fits inside 3.4 m body
-        const float IL = 7.0f;   // interior length (Z)  — spans cargo area
-        const float IH = 2.6f;   // interior height (Y)  — fits inside 2.7 m body
-        const float T  = 0.15f;  // wall thickness
+        // ── Dimensions ──────────────────────────────────────────────────
+        const float IW = 2.6f;       // interior width (X)
+        const float IH = 2.5f;       // cargo ceiling height
+        const float CH = 2.4f;       // cab ceiling height
+        const float T  = 0.10f;      // wall thickness
 
-        Material wallMat   = MakeMat("InteriorWall",   new Color(0.95f, 0.92f, 0.86f), 0.1f);
-        Material floorMat  = MakeMat("InteriorFloor",  new Color(0.60f, 0.55f, 0.45f), 0.4f);
-        Material equipMat  = MakeMat("CookingEquip",   new Color(0.75f, 0.75f, 0.78f), 0.8f);
-        Material counterMat= MakeMat("Counter",        new Color(0.50f, 0.45f, 0.40f), 0.3f);
-        Material stoveMat  = MakeMat("Stove",          new Color(0.25f, 0.25f, 0.28f), 0.7f);
-        Material signMat   = MakeMat("ExitSign",       new Color(0.10f, 0.70f, 0.20f), 0.2f);
+        const float CZ_MIN  = -3.8f; // cargo rear
+        const float CZ_MAX  = 1.5f;  // cargo front / divider
+        const float CAB_MAX = 4.3f;  // cab front (behind dashboard)
 
-        // Parent directly to the truck so it moves with it
+        float cargoLen   = CZ_MAX - CZ_MIN;
+        float cargoMidZ  = (CZ_MIN + CZ_MAX) / 2f;
+        float cabLen     = CAB_MAX - CZ_MAX;
+        float cabMidZ    = (CZ_MAX + CAB_MAX) / 2f;
+
+        // Serving window opening in right wall
+        const float WIN_Z_MIN = -2.0f;
+        const float WIN_Z_MAX =  0.4f;
+        const float WIN_Y_MIN =  1.0f;
+        const float WIN_Y_MAX =  2.0f;
+        float winCZ = (WIN_Z_MIN + WIN_Z_MAX) / 2f;
+        float winLZ = WIN_Z_MAX - WIN_Z_MIN;
+
+        // ── Materials ───────────────────────────────────────────────────
+        Material wallMat    = MakeMat("InteriorWall",   new Color(0.93f, 0.90f, 0.85f), 0.10f);
+        Material floorMat   = MakeMat("InteriorFloor",  new Color(0.55f, 0.50f, 0.42f), 0.30f);
+        Material ceilMat    = MakeMat("InteriorCeil",   new Color(0.90f, 0.88f, 0.84f), 0.10f);
+        Material signMat    = MakeMat("ExitSign",       new Color(0.10f, 0.70f, 0.20f), 0.20f);
+        Material dividerMat = MakeMat("Divider",        new Color(0.85f, 0.82f, 0.78f), 0.15f);
+        Material dashMat    = MakeMat("Dashboard",      new Color(0.22f, 0.22f, 0.24f), 0.40f);
+        Material seatMat    = MakeMat("SeatFrame",      new Color(0.25f, 0.25f, 0.27f), 0.35f);
+        Material cushionMat = MakeMat("SeatCushion",    new Color(0.35f, 0.32f, 0.30f), 0.15f);
+        Material consoleMat = MakeMat("Console",        new Color(0.30f, 0.30f, 0.32f), 0.30f);
+        Material wheelMat2  = MakeMat("SteeringInt",    new Color(0.20f, 0.20f, 0.22f), 0.60f);
+
+        // ── Room parent ─────────────────────────────────────────────────
         var room = new GameObject("TruckInteriorRoom");
         room.transform.SetParent(truck.transform);
-        room.transform.localPosition = new Vector3(0f, 0f, -0.5f);  // centred on cargo body
+        room.transform.localPosition = Vector3.zero;
         room.transform.localRotation = Quaternion.identity;
 
+        // ═══════════════════════════════════════════════════════════════
+        //  CARGO AREA — empty, ready for modular equipment
+        // ═══════════════════════════════════════════════════════════════
+
         // Floor
-        MakeRoomPart("Floor",   room.transform, new Vector3(0, T/2, 0),
-            new Vector3(IW, T, IL), floorMat);
-
+        MakeRoomPart("CargoFloor", room.transform,
+            new Vector3(0f, T / 2, cargoMidZ),
+            new Vector3(IW, T, cargoLen), floorMat);
         // Ceiling
-        MakeRoomPart("Ceiling", room.transform, new Vector3(0, IH - T/2, 0),
-            new Vector3(IW + T*2, T, IL + T*2), wallMat);
+        MakeRoomPart("CargoCeiling", room.transform,
+            new Vector3(0f, IH - T / 2, cargoMidZ),
+            new Vector3(IW + T * 2, T, cargoLen), ceilMat);
 
-        // Walls
-        MakeRoomPart("WallLeft",  room.transform, new Vector3(-IW/2 - T/2, IH/2, 0),
-            new Vector3(T, IH, IL), wallMat);
-        MakeRoomPart("WallRight", room.transform, new Vector3( IW/2 + T/2, IH/2, 0),
-            new Vector3(T, IH, IL), wallMat);
-        // WallBack (rear/entry side) intentionally omitted — open to the entrance
-        // Front wall (cab side)
-        MakeRoomPart("WallFront", room.transform, new Vector3(0, IH/2, IL/2 + T/2),
-            new Vector3(IW + T*2, IH, T), wallMat);
+        // Left wall (solid, full cargo length)
+        MakeRoomPart("CargoWallLeft", room.transform,
+            new Vector3(-IW / 2 - T / 2, IH / 2, cargoMidZ),
+            new Vector3(T, IH, cargoLen), wallMat);
 
-        // ── Counter / cooking station along left wall ─────────────────────
-        // Counter runs most of the length
-        MakeRoomPart("Counter",        room.transform, new Vector3(-IW/2 + 0.45f, 1.0f,  0.5f),
-            new Vector3(0.9f, 1.0f, 5.0f), counterMat);
-        MakeRoomPart("CounterTop",     room.transform, new Vector3(-IW/2 + 0.45f, 1.52f,  0.5f),
-            new Vector3(0.92f, 0.06f, 5.02f), equipMat);
+        // Right wall — split around serving window
+        float rX = IW / 2 + T / 2;
+        float rearMidZ  = (CZ_MIN + WIN_Z_MIN) / 2f;
+        float rearSpan  = WIN_Z_MIN - CZ_MIN;
+        float frontMidZ = (WIN_Z_MAX + CZ_MAX) / 2f;
+        float frontSpan = CZ_MAX - WIN_Z_MAX;
+        MakeRoomPart("RightWallRear", room.transform,
+            new Vector3(rX, IH / 2, rearMidZ), new Vector3(T, IH, rearSpan), wallMat);
+        MakeRoomPart("RightWallFront", room.transform,
+            new Vector3(rX, IH / 2, frontMidZ), new Vector3(T, IH, frontSpan), wallMat);
+        MakeRoomPart("RightWallBelow", room.transform,
+            new Vector3(rX, WIN_Y_MIN / 2, winCZ), new Vector3(T, WIN_Y_MIN, winLZ), wallMat);
+        float aboveMid = (WIN_Y_MAX + IH) / 2;
+        float aboveSpan = IH - WIN_Y_MAX;
+        MakeRoomPart("RightWallAbove", room.transform,
+            new Vector3(rX, aboveMid, winCZ), new Vector3(T, aboveSpan, winLZ), wallMat);
 
-        // Stove / griddle
-        MakeRoomPart("Stove",          room.transform, new Vector3(-IW/2 + 0.45f, 1.6f, -0.8f),
-            new Vector3(0.85f, 0.12f, 1.4f), stoveMat);
-        MakeRoomPart("StoveBack",      room.transform, new Vector3(-IW/2 + 0.2f, 1.9f, -0.8f),
-            new Vector3(0.1f, 0.8f, 1.4f), equipMat);
+        // Rear — OPEN (player entry/exit)
 
-        // Fryer
-        MakeRoomPart("Fryer",          room.transform, new Vector3(-IW/2 + 0.45f, 1.6f, 1.6f),
-            new Vector3(0.7f, 0.5f, 0.7f), stoveMat);
+        // ── Divider wall (cargo → cab) with doorway ─────────────────────
+        float doorW = 0.8f;
+        float doorH = 2.0f;
+        float halfIW = IW / 2;
+        float sideW = halfIW - doorW / 2;
+        // Left section
+        MakeRoomPart("DividerL", room.transform,
+            new Vector3(-(halfIW - sideW / 2 + doorW / 4), IH / 2, CZ_MAX),
+            new Vector3(sideW, IH, T), dividerMat);
+        // Right section
+        MakeRoomPart("DividerR", room.transform,
+            new Vector3((halfIW - sideW / 2 + doorW / 4), IH / 2, CZ_MAX),
+            new Vector3(sideW, IH, T), dividerMat);
+        // Above doorway
+        MakeRoomPart("DividerTop", room.transform,
+            new Vector3(0f, (doorH + IH) / 2, CZ_MAX),
+            new Vector3(doorW, IH - doorH, T), dividerMat);
+        // Door frame trim
+        MakeRoomPart("DoorFrameL", room.transform,
+            new Vector3(-doorW / 2 - 0.02f, doorH / 2, CZ_MAX + 0.01f),
+            new Vector3(0.04f, doorH, 0.04f), consoleMat);
+        MakeRoomPart("DoorFrameR", room.transform,
+            new Vector3(doorW / 2 + 0.02f, doorH / 2, CZ_MAX + 0.01f),
+            new Vector3(0.04f, doorH, 0.04f), consoleMat);
 
-        // Serving shelf (right side — serving window side)
-        MakeRoomPart("ServingShelf",   room.transform, new Vector3(IW/2 - 0.3f, 1.2f, -0.8f),
-            new Vector3(0.6f, 0.08f, 2.4f), counterMat);
+        // Cargo interior light
+        var cargoLight = new GameObject("CargoLight");
+        cargoLight.transform.SetParent(room.transform);
+        cargoLight.transform.localPosition = new Vector3(0f, IH - 0.2f, cargoMidZ);
+        var cl = cargoLight.AddComponent<Light>();
+        cl.type = LightType.Point; cl.range = 8f;
+        cl.intensity = 2.5f;
+        cl.color = new Color(1f, 0.97f, 0.88f); cl.shadows = LightShadows.None;
 
-        // Overhead shelves (below ceiling inner face at IH - T = 2.45)
-        MakeRoomPart("ShelfHigh1",     room.transform, new Vector3(-IW/2 + 0.2f, 2.1f, 1.6f),
-            new Vector3(0.25f, 0.08f, 0.8f), equipMat);
-        MakeRoomPart("ShelfHigh2",     room.transform, new Vector3(-IW/2 + 0.2f, 2.1f, 0.5f),
-            new Vector3(0.25f, 0.08f, 0.8f), equipMat);
-
-        // ── Driver seat area (front = +Z end, all within IL/2 = 3.5) ──────
-        MakeRoomPart("Seat",           room.transform, new Vector3(-0.5f, 0.5f,  2.8f),
-            new Vector3(0.8f, 0.5f, 0.8f), counterMat);
-        MakeRoomPart("SeatBack",       room.transform, new Vector3(-0.5f, 1.0f,  3.2f),
-            new Vector3(0.8f, 0.8f, 0.15f), counterMat);
-        // Steering wheel hint
-        MakeRoomPart("SteeringWheel",  room.transform, new Vector3(-0.5f, 1.4f,  2.6f),
-            new Vector3(0.5f, 0.5f, 0.06f), stoveMat);
-        MakeRoomPart("SteeringCol",    room.transform, new Vector3(-0.5f, 1.1f,  2.65f),
-            new Vector3(0.06f, 0.5f, 0.06f), stoveMat);
-
-        // ── Exit at the rear opening — green floor strip to mark it ──────────
+        // Exit floor marker (green strip at rear)
         MakeRoomPart("ExitFloorMarker", room.transform,
-            new Vector3(0f, T, -IL/2 + 0.4f), new Vector3(IW - 0.1f, 0.02f, 0.6f), signMat);
+            new Vector3(0f, T, CZ_MIN + 0.3f),
+            new Vector3(IW - 0.2f, 0.02f, 0.5f), signMat);
 
-        // ── Trigger colliders ─────────────────────────────────────────────
-
-        // Exit trigger spans the full rear opening — player walks back to exit
+        // Exit trigger
         var exitGO = new GameObject("ExitDoorTrigger");
         exitGO.transform.SetParent(room.transform);
-        exitGO.transform.localPosition = new Vector3(0f, 1.0f, -IL/2 + 0.5f);
+        exitGO.transform.localPosition = new Vector3(0f, 1.0f, CZ_MIN + 0.4f);
         var exitCol = exitGO.AddComponent<BoxCollider>();
-        exitCol.size = new Vector3(IW, 2.2f, 1.2f);
+        exitCol.size   = new Vector3(IW, 2.2f, 1.0f);
         exitCol.isTrigger = true;
-        var exitInteract = exitGO.AddComponent<TruckInteriorExit>();
-        exitInteract.truck = truck;
+        exitGO.AddComponent<TruckInteriorExit>().truck = truck;
+
+        // ═══════════════════════════════════════════════════════════════
+        //  CAB — driver & passenger seats
+        // ═══════════════════════════════════════════════════════════════
+
+        // Cab floor
+        MakeRoomPart("CabFloor", room.transform,
+            new Vector3(0f, T / 2, cabMidZ), new Vector3(IW, T, cabLen), floorMat);
+        // Cab ceiling
+        MakeRoomPart("CabCeiling", room.transform,
+            new Vector3(0f, CH - T / 2, cabMidZ), new Vector3(IW, T, cabLen), ceilMat);
+
+        // Dashboard
+        MakeRoomPart("Dashboard", room.transform,
+            new Vector3(0f, 0.85f, CAB_MAX - 0.15f),
+            new Vector3(IW - 0.2f, 0.70f, 0.30f), dashMat);
+        MakeRoomPart("DashTop", room.transform,
+            new Vector3(0f, 1.22f, CAB_MAX - 0.20f),
+            new Vector3(IW - 0.1f, 0.04f, 0.40f), dashMat);
+        // Instrument cluster (driver side)
+        MakeRoomPart("Instruments", room.transform,
+            new Vector3(-0.50f, 1.05f, CAB_MAX - 0.02f),
+            new Vector3(0.50f, 0.30f, 0.04f), consoleMat);
+
+        // Steering wheel + column (driver side = −X)
+        MakeRoomPart("SteeringCol", room.transform,
+            new Vector3(-0.50f, 1.00f, CAB_MAX - 0.50f),
+            new Vector3(0.06f, 0.40f, 0.06f), wheelMat2);
+        MakeRoomPart("SteeringWheel", room.transform,
+            new Vector3(-0.50f, 1.25f, CAB_MAX - 0.65f),
+            new Vector3(0.40f, 0.40f, 0.04f), wheelMat2);
+        MakeRoomPart("SteeringHub", room.transform,
+            new Vector3(-0.50f, 1.25f, CAB_MAX - 0.67f),
+            new Vector3(0.12f, 0.12f, 0.03f), consoleMat);
+
+        // ── Seat positions ──────────────────────────────────────────────
+        float driverX    = -0.55f;
+        float passengerX =  0.55f;
+        float seatZ      = cabMidZ - 0.3f;
+
+        // Driver seat
+        MakeRoomPart("DriverBase", room.transform,
+            new Vector3(driverX, 0.20f, seatZ), new Vector3(0.55f, 0.30f, 0.06f), seatMat);
+        MakeRoomPart("DriverCushion", room.transform,
+            new Vector3(driverX, 0.45f, seatZ), new Vector3(0.55f, 0.10f, 0.55f), cushionMat);
+        MakeRoomPart("DriverBack", room.transform,
+            new Vector3(driverX, 0.92f, seatZ + 0.28f), new Vector3(0.55f, 0.85f, 0.10f), cushionMat);
+        MakeRoomPart("DriverHeadrest", room.transform,
+            new Vector3(driverX, 1.45f, seatZ + 0.28f), new Vector3(0.25f, 0.22f, 0.08f), cushionMat);
+
+        // Passenger seat
+        MakeRoomPart("PassBase", room.transform,
+            new Vector3(passengerX, 0.20f, seatZ), new Vector3(0.55f, 0.30f, 0.06f), seatMat);
+        MakeRoomPart("PassCushion", room.transform,
+            new Vector3(passengerX, 0.45f, seatZ), new Vector3(0.55f, 0.10f, 0.55f), cushionMat);
+        MakeRoomPart("PassBack", room.transform,
+            new Vector3(passengerX, 0.92f, seatZ + 0.28f), new Vector3(0.55f, 0.85f, 0.10f), cushionMat);
+        MakeRoomPart("PassHeadrest", room.transform,
+            new Vector3(passengerX, 1.45f, seatZ + 0.28f), new Vector3(0.25f, 0.22f, 0.08f), cushionMat);
+
+        // Center console + gear shift
+        MakeRoomPart("CenterConsole", room.transform,
+            new Vector3(0f, 0.40f, seatZ), new Vector3(0.30f, 0.50f, 0.55f), consoleMat);
+        MakeRoomPart("GearShift", room.transform,
+            new Vector3(0f, 0.70f, seatZ - 0.05f), new Vector3(0.06f, 0.12f, 0.06f), wheelMat2);
+
+        // Cab light
+        var cabLightGO = new GameObject("CabLight");
+        cabLightGO.transform.SetParent(room.transform);
+        cabLightGO.transform.localPosition = new Vector3(0f, CH - 0.15f, cabMidZ);
+        var cabL = cabLightGO.AddComponent<Light>();
+        cabL.type = LightType.Point; cabL.range = 4f;
+        cabL.intensity = 1.5f;
+        cabL.color = new Color(1f, 0.97f, 0.88f); cabL.shadows = LightShadows.None;
 
         // Driver seat trigger
         var driverGO = new GameObject("DriverSeatTrigger");
         driverGO.transform.SetParent(room.transform);
-        driverGO.transform.localPosition = new Vector3(-0.5f, 1.0f, 2.8f);
+        driverGO.transform.localPosition = new Vector3(driverX, 0.80f, seatZ);
         var driverCol = driverGO.AddComponent<BoxCollider>();
-        driverCol.size = new Vector3(1.2f, 1.5f, 1.2f);
+        driverCol.size   = new Vector3(0.80f, 1.50f, 0.80f);
         driverCol.isTrigger = true;
-        var driverInteract = driverGO.AddComponent<TruckDriverSeat>();
-        driverInteract.truck = truck;
+        driverGO.AddComponent<TruckDriverSeat>().truck = truck;
 
-        // ── Interior lighting ─────────────────────────────────────────────
-        var lightGO = new GameObject("InteriorLight");
-        lightGO.transform.SetParent(room.transform);
-        lightGO.transform.localPosition = new Vector3(0f, IH - 0.3f, 0f);
-        var light = lightGO.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 10f;
-        light.intensity = 2.5f;
-        light.color = new Color(1f, 0.97f, 0.88f);
-        light.shadows = LightShadows.None;
-
-        // ── Spawn points ──────────────────────────────────────────────────
+        // ── Spawn points ────────────────────────────────────────────────
         var interiorSpawn = new GameObject("InteriorSpawnPoint");
         interiorSpawn.transform.SetParent(room.transform);
-        interiorSpawn.transform.localPosition = new Vector3(0.6f, 0.2f, -2.0f);  // near exit door, above floor
-        interiorSpawn.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);   // facing inward
+        interiorSpawn.transform.localPosition = new Vector3(0f, 0.2f, CZ_MIN + 1.0f);
+        interiorSpawn.transform.localRotation = Quaternion.identity; // facing +Z (toward cab)
 
         var driverSpawn = new GameObject("DriverSpawnPoint");
         driverSpawn.transform.SetParent(room.transform);
-        driverSpawn.transform.localPosition = new Vector3(-0.5f, 0.2f, 2.5f);
+        driverSpawn.transform.localPosition = new Vector3(driverX, 0.2f, seatZ - 0.5f);
 
-        // Wire spawn points on truck
         truck.interiorSpawnPoint = interiorSpawn.transform;
         truck.driverSeatPoint    = driverSpawn.transform;
 
