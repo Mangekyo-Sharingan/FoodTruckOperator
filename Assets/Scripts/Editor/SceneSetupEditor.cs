@@ -138,7 +138,9 @@ public static class SceneSetupEditor
             UnityEditor.GameObjectUtility.SetStaticEditorFlags(go, UnityEditor.StaticEditorFlags.NavigationStatic);
         }
 
+        #pragma warning disable CS0618
         UnityEditor.AI.NavMeshBuilder.BuildNavMesh();
+        #pragma warning restore CS0618
         Debug.Log("[SceneSetup] NavMesh baked");
 #endif
     }
