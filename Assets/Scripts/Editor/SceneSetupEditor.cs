@@ -129,9 +129,10 @@ public static class SceneSetupEditor
 
     static void SetupNavMesh(GameObject cityGO)
     {
-        var surface = cityGO.AddComponent<UnityEngine.AI.NavMeshSurface>();
-        surface.BuildNavMesh();
+#if UNITY_EDITOR
+        UnityEditor.AI.NavMeshBuilder.BuildNavMesh();
         Debug.Log("[SceneSetup] NavMesh baked");
+#endif
     }
 
     // ── Player ────────────────────────────────────────────────────────────
