@@ -1,0 +1,55 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+Assets/External/
+Assets/Plugins/Editor/
+
+# VS
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Unity Logs
+Logs/
+*.log
+
+# Package Manager
+Packages/
+
+# Project Settings
+ProjectSettings/TagManager.asset
+ProjectSettings/ProjectVersion.txt
+ProjectSettings/ProjectSettings.asset
+
+# Build outputs
+*.apk
+*.aab
+*.exe
+*.dll
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# URP
+UserSettings/
+
+# Upgrade
+UpgradeLog.htm
+
+# AI/Agent Tools (do not commit)
+.mcp.json
+CLAUDE.md
+opencode.json
+.claude/
+.opencode/
+.wolf/
