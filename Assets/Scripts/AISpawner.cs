@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using System.Collections.Generic;
 
 public class AISpawner : MonoBehaviour
@@ -6,27 +7,36 @@ public class AISpawner : MonoBehaviour
     public static AISpawner Instance { get; private set; }
 
     [Header("Prefabs")]
-    public GameObject pedestrianPrefab;
-    public GameObject customerPrefab;
+    [SerializeField] private GameObject pedestrianPrefab;
+    [SerializeField] private GameObject customerPrefab;
 
     [Header("Settings")]
-    public int pedestrianCount = 20;
-    public int customerCount = 20;
-    public int poolSize = 25;
+    [SerializeField] private int pedestrianCount = 20;
+    [SerializeField] private int customerCount = 20;
+    [SerializeField] private int poolSize = 25;
 
     [Header("Materials")]
-    public Material pedestrianMaterial;
-    public Material customerMaterial;
+    [SerializeField] private Material pedestrianMaterial;
+    [SerializeField] private Material customerMaterial;
 
-    private List<GameObject> _pedestrianPool = new List<GameObject>();
-    private List<GameObject> _customerPool = new List<GameObject>();
-    private float _spawnTimer;
+    [Header("Spawn Settings")]
+    [SerializeField] private float cityRadius = 50f;
+    [SerializeField] private float spawnSearchRadius = 10f;
+
+    [SerializeField] private List<GameObject> _pedestrianPool = new List<GameObject>();
+    [SerializeField] private List<GameObject> _customerPool = new List<GameObject>();
+    [SerializeField] private float _spawnTimer;
     private const float SpawnInterval = 0.5f;
 
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) { Instance = null; }
     }
 
     private void Start()
@@ -86,13 +96,13 @@ public class AISpawner : MonoBehaviour
         int activePedestrians = CountActive(_pedestrianPool);
         if (activePedestrians < pedestrianCount)
         {
-            SpawnFromPool(_pedestrianPool);
+            SpawnFromPool(_pedestrianPool, true);
         }
 
         int activeCustomers = CountActive(_customerPool);
         if (activeCustomers < customerCount)
         {
-            SpawnFromPool(_customerPool);
+            SpawnFromPool(_customerPool, false);
         }
     }
 
@@ -106,12 +116,17 @@ public class AISpawner : MonoBehaviour
         return count;
     }
 
-    private void SpawnFromPool(List<GameObject> pool)
+    private void SpawnFromPool(List<GameObject> pool, bool isPedestrian)
     {
         foreach (var obj in pool)
         {
             if (!obj.activeInHierarchy)
             {
+                Vector3 spawnPosition = isPedestrian 
+                    ? GetRandomCityPosition() 
+                    : GetEdgePosition();
+
+                obj.transform.position = spawnPosition;
                 obj.SetActive(true);
 
                 var pedestrian = obj.GetComponent<PedestrianAI>();
@@ -131,5 +146,48 @@ public class AISpawner : MonoBehaviour
                 return;
             }
         }
+    }
+
+    private Vector3 GetRandomCityPosition()
+    {
+        Vector2 randomCircle = Random.insideUnitCircle * cityRadius;
+        Vector3 candidatePosition = new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+        if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+
+        return candidatePosition;
+    }
+
+    private Vector3 GetEdgePosition()
+    {
+        int edge = Random.Range(0, 4);
+        float z = 0f;
+
+        switch (edge)
+        {
+            case 0: z = cityRadius; break;
+            case 1: z = -cityRadius; break;
+            case 2: case 3: break;
+        }
+
+        float x = (edge < 2) ? Random.Range(-cityRadius, cityRadius) : cityRadius * (edge == 2 ? 1 : -1);
+        
+        if (edge >= 2)
+        {
+            x = Random.Range(-cityRadius, cityRadius);
+            z = cityRadius * (edge == 2 ? 1 : -1);
+        }
+
+        Vector3 candidatePosition = new Vector3(x, 0f, z);
+
+        if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+
+        return candidatePosition;
     }
 }
