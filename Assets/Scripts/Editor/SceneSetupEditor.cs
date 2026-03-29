@@ -58,6 +58,26 @@ public static class SceneSetupEditor
         Debug.Log("[SceneSetup] Created GameUI");
     }
 
+    [MenuItem("FoodTruck/Setup AI Systems")]
+    public static void SetupAISystems()
+    {
+        var spawnerObj = new GameObject("AISpawner");
+        var spawner = spawnerObj.AddComponent<AISpawner>();
+
+        var pedMat = new Material(_cachedShader ?? Shader.Find("Universal Render Pipeline/Lit"));
+        pedMat.SetColor("_BaseColor", new Color(0.204f, 0.596f, 0.859f));
+        AssetDatabase.CreateAsset(pedMat, "Assets/Materials/Pedestrian.mat");
+        spawner.pedestrianMaterial = pedMat;
+
+        var custMat = new Material(_cachedShader ?? Shader.Find("Universal Render Pipeline/Lit"));
+        custMat.SetColor("_BaseColor", new Color(0.18f, 0.8f, 0.443f));
+        AssetDatabase.CreateAsset(custMat, "Assets/Materials/Customer.mat");
+        spawner.customerMaterial = custMat;
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[SceneSetup] AI Systems setup complete");
+    }
+
     // ── Lighting & Weather ─────────────────────────────────────────────────
 
     static void SetupLighting()
@@ -214,11 +234,19 @@ public static class SceneSetupEditor
         MakePart("WindowR", ext.transform,
             new Vector3( 1.72f, 1.95f, 3.7f), new Vector3(0.08f, 1.0f, 1.8f), windowMat);
 
-        // Serving window (right side of cargo body, cut-out area)
+        // Serving window frame (right side of cargo body)
         MakePart("ServingWindowFrame", ext.transform,
             new Vector3(1.71f, 2.0f, -0.8f), new Vector3(0.08f, 1.2f, 2.6f), metalMat);
-        MakePart("ServingWindowGlass", ext.transform,
-            new Vector3(1.72f, 2.0f, -0.8f), new Vector3(0.04f, 1.05f, 2.4f), windowMat);
+
+        // Hatch: pivot sits at the top edge of the window; panel hangs down from it.
+        // Rotating the pivot around local Z swings the panel outward like an awning.
+        var hatchPivotGO = new GameObject("ServingHatchPivot");
+        hatchPivotGO.transform.SetParent(ext.transform);
+        hatchPivotGO.transform.localPosition = new Vector3(1.74f, 2.62f, -0.8f);
+        hatchPivotGO.transform.localRotation = Quaternion.identity;
+        hatchPivotGO.AddComponent<ServingHatch>();
+        MakePart("HatchPanel", hatchPivotGO.transform,
+            new Vector3(0f, -0.525f, 0f), new Vector3(0.05f, 1.05f, 2.35f), windowMat);
 
         // Awning over serving window
         MakePart("Awning", ext.transform,
@@ -254,6 +282,17 @@ public static class SceneSetupEditor
         // Remove colliders from all exterior visuals
         foreach (var c in ext.GetComponentsInChildren<Collider>())
             Object.DestroyImmediate(c);
+
+        // ── Serving hatch interaction trigger (right side, doesn't rotate) ──
+        var hatchTriggerGO = new GameObject("HatchTrigger");
+        hatchTriggerGO.transform.SetParent(root.transform);
+        hatchTriggerGO.transform.localPosition = new Vector3(2.5f, 1.8f, -0.8f);
+        var hatchTriggerCol = hatchTriggerGO.AddComponent<BoxCollider>();
+        hatchTriggerCol.size   = new Vector3(1.2f, 2.5f, 2.8f);
+        hatchTriggerCol.isTrigger = true;
+        var hatchInteract = hatchTriggerGO.AddComponent<HatchInteract>();
+        // Wire hatch reference after ext hierarchy is built
+        hatchInteract.hatch = ext.GetComponentInChildren<ServingHatch>();
 
         // ── Exterior door trigger — spans the full rear face of the truck ────
         // Truck rear is local z = -5.0 (world +Z from truck origin).
@@ -343,9 +382,8 @@ public static class SceneSetupEditor
             new Vector3(T, IH, IL), wallMat);
         MakeRoomPart("WallRight", room.transform, new Vector3( IW/2 + T/2, IH/2, 0),
             new Vector3(T, IH, IL), wallMat);
-        MakeRoomPart("WallBack",  room.transform, new Vector3(0, IH/2, -IL/2 - T/2),
-            new Vector3(IW + T*2, IH, T), wallMat);
-        // Front wall (cab side) — partial, has a "windshield" opening hint
+        // WallBack (rear/entry side) intentionally omitted — open to the entrance
+        // Front wall (cab side)
         MakeRoomPart("WallFront", room.transform, new Vector3(0, IH/2, IL/2 + T/2),
             new Vector3(IW + T*2, IH, T), wallMat);
 
@@ -387,18 +425,18 @@ public static class SceneSetupEditor
         MakeRoomPart("SteeringCol",    room.transform, new Vector3(-0.5f, 1.1f,  2.65f),
             new Vector3(0.06f, 0.5f, 0.06f), stoveMat);
 
-        // ── Exit door (side, mid-room) — green marker ─────────────────────
-        MakeRoomPart("ExitDoorMarker", room.transform, new Vector3(IW/2 - 0.05f, 1.5f, -2.2f),
-            new Vector3(0.12f, 2.0f, 1.0f), signMat);
+        // ── Exit at the rear opening — green floor strip to mark it ──────────
+        MakeRoomPart("ExitFloorMarker", room.transform,
+            new Vector3(0f, T, -IL/2 + 0.4f), new Vector3(IW - 0.1f, 0.02f, 0.6f), signMat);
 
         // ── Trigger colliders ─────────────────────────────────────────────
 
-        // Exit door trigger — inside the right wall, player walks into it to leave
+        // Exit trigger spans the full rear opening — player walks back to exit
         var exitGO = new GameObject("ExitDoorTrigger");
         exitGO.transform.SetParent(room.transform);
-        exitGO.transform.localPosition = new Vector3(IW/2 - 0.3f, 1.0f, -2.2f);
+        exitGO.transform.localPosition = new Vector3(0f, 1.0f, -IL/2 + 0.5f);
         var exitCol = exitGO.AddComponent<BoxCollider>();
-        exitCol.size = new Vector3(0.8f, 2.0f, 1.2f);
+        exitCol.size = new Vector3(IW, 2.2f, 1.2f);
         exitCol.isTrigger = true;
         var exitInteract = exitGO.AddComponent<TruckInteriorExit>();
         exitInteract.truck = truck;
