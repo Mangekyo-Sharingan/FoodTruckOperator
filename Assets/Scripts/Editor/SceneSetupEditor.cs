@@ -130,6 +130,14 @@ public static class SceneSetupEditor
     static void SetupNavMesh(GameObject cityGO)
     {
 #if UNITY_EDITOR
+        // Collect all renderers from city and mark as Navigation Static
+        var renderers = cityGO.GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            GameObject go = renderer.gameObject;
+            UnityEditor.GameObjectUtility.SetStaticEditorFlags(go, UnityEditor.StaticEditorFlags.NavigationStatic);
+        }
+
         UnityEditor.AI.NavMeshBuilder.BuildNavMesh();
         Debug.Log("[SceneSetup] NavMesh baked");
 #endif
