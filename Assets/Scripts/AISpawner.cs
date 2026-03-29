@@ -133,6 +133,13 @@ public class AISpawner : MonoBehaviour
                     : GetEdgePosition();
 
                 obj.transform.position = spawnPosition;
+
+                var agent = obj.GetComponent<NavMeshAgent>();
+                if (agent != null)
+                {
+                    agent.Warp(spawnPosition);
+                }
+
                 obj.SetActive(true);
 
                 var pedestrian = obj.GetComponent<PedestrianAI>();
@@ -156,44 +163,58 @@ public class AISpawner : MonoBehaviour
 
     private Vector3 GetRandomCityPosition()
     {
-        Vector2 randomCircle = Random.insideUnitCircle * cityRadius;
-        Vector3 candidatePosition = new Vector3(randomCircle.x, 0f, randomCircle.y);
-
-        if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
+        for (int i = 0; i < 10; i++)
         {
-            return hit.position;
+            Vector2 randomCircle = Random.insideUnitCircle * cityRadius;
+            Vector3 candidatePosition = new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+            if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
         }
 
-        return candidatePosition;
+        Debug.LogWarning("[AISpawner] Could not find valid NavMesh position for pedestrian");
+        return Vector3.zero;
     }
 
     private Vector3 GetEdgePosition()
     {
-        int edge = Random.Range(0, 4);
-        float z = 0f;
-
-        switch (edge)
+        for (int i = 0; i < 10; i++)
         {
-            case 0: z = cityRadius; break;
-            case 1: z = -cityRadius; break;
-            case 2: case 3: break;
+            int edge = Random.Range(0, 4);
+            float z = 0f;
+            float x = 0f;
+
+            switch (edge)
+            {
+                case 0: // North
+                    x = Random.Range(-cityRadius, cityRadius);
+                    z = cityRadius;
+                    break;
+                case 1: // South
+                    x = Random.Range(-cityRadius, cityRadius);
+                    z = -cityRadius;
+                    break;
+                case 2: // East
+                    x = cityRadius;
+                    z = Random.Range(-cityRadius, cityRadius);
+                    break;
+                case 3: // West
+                    x = -cityRadius;
+                    z = Random.Range(-cityRadius, cityRadius);
+                    break;
+            }
+
+            Vector3 candidatePosition = new Vector3(x, 0f, z);
+
+            if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
         }
 
-        float x = (edge < 2) ? Random.Range(-cityRadius, cityRadius) : cityRadius * (edge == 2 ? 1 : -1);
-        
-        if (edge >= 2)
-        {
-            x = Random.Range(-cityRadius, cityRadius);
-            z = cityRadius * (edge == 2 ? 1 : -1);
-        }
-
-        Vector3 candidatePosition = new Vector3(x, 0f, z);
-
-        if (NavMesh.SamplePosition(candidatePosition, out NavMeshHit hit, spawnSearchRadius, NavMesh.AllAreas))
-        {
-            return hit.position;
-        }
-
-        return candidatePosition;
+        Debug.LogWarning("[AISpawner] Could not find valid NavMesh position for customer");
+        return Vector3.zero;
     }
 }

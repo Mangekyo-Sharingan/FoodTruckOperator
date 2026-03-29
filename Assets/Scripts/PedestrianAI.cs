@@ -18,12 +18,18 @@ public class PedestrianAI : MonoBehaviour
         _agent = GetComponent<NavMeshAgent>();
         if (_agent == null)
         {
-            Debug.LogError($"NavMeshAgent not found on {gameObject.name}");
+            Debug.LogError($"[PedestrianAI] NavMeshAgent not found on {gameObject.name}");
             return;
         }
 
         _agent.speed = 2f;
         _agent.enabled = true;
+        
+        if (!_agent.isOnNavMesh)
+        {
+            Debug.LogWarning($"[PedestrianAI] {gameObject.name} not on NavMesh at position {transform.position}");
+        }
+
         PickNewDestination();
     }
 
