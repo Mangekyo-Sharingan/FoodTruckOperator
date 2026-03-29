@@ -3,6 +3,9 @@ using UnityEngine.AI;
 
 public class PedestrianAI : MonoBehaviour
 {
+    private const float SamplePositionRadius = 10f;
+    private const float RemainingDistanceThreshold = 0.5f;
+
     private NavMeshAgent _agent;
     private float _waitTime;
     private float _waitTimer;
@@ -13,28 +16,35 @@ public class PedestrianAI : MonoBehaviour
     public void Initialize()
     {
         _agent = GetComponent<NavMeshAgent>();
+        if (_agent == null)
+        {
+            Debug.LogError($"NavMeshAgent not found on {gameObject.name}");
+            return;
+        }
+
         _agent.speed = 2f;
         _agent.enabled = true;
         PickNewDestination();
     }
 
-    void Update()
+    private void Update()
     {
-        if (!_agent.enabled || !_agent.isOnNavMesh) return;
+        if (_agent == null || !_agent.enabled || !_agent.isOnNavMesh) return;
 
         _waitTimer += Time.deltaTime;
-        if (_waitTimer >= _waitTime || _agent.remainingDistance < 0.5f)
+        if (_waitTimer >= _waitTime || _agent.remainingDistance < RemainingDistanceThreshold)
         {
             PickNewDestination();
         }
 
-        if (Vector3.Distance(transform.position, _spawnCenter) > _despawnRadius)
+        float sqrDespawnRadius = _despawnRadius * _despawnRadius;
+        if ((transform.position - _spawnCenter).sqrMagnitude > sqrDespawnRadius)
         {
             gameObject.SetActive(false);
         }
     }
 
-    void PickNewDestination()
+    private void PickNewDestination()
     {
         _waitTimer = 0f;
         _waitTime = Random.Range(1f, 2f);
@@ -43,7 +53,7 @@ public class PedestrianAI : MonoBehaviour
         Vector3 target = new Vector3(randomPoint.x, 0, randomPoint.y);
 
         NavMeshHit hit;
-        if (NavMesh.SamplePosition(target, out hit, 10f, NavMesh.AllAreas))
+        if (NavMesh.SamplePosition(target, out hit, SamplePositionRadius, NavMesh.AllAreas))
         {
             _agent.SetDestination(hit.position);
         }
