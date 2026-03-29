@@ -19,6 +19,12 @@ public class AISpawner : MonoBehaviour
     [SerializeField] private Material pedestrianMaterial;
     [SerializeField] private Material customerMaterial;
 
+    public void SetMaterials(Material pedMat, Material custMat)
+    {
+        pedestrianMaterial = pedMat;
+        customerMaterial = custMat;
+    }
+
     [Header("Spawn Settings")]
     [SerializeField] private float cityRadius = 50f;
     [SerializeField] private float spawnSearchRadius = 10f;

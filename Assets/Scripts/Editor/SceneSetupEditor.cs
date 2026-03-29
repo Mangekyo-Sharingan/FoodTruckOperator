@@ -67,12 +67,12 @@ public static class SceneSetupEditor
         var pedMat = new Material(_cachedShader ?? Shader.Find("Universal Render Pipeline/Lit"));
         pedMat.SetColor("_BaseColor", new Color(0.204f, 0.596f, 0.859f));
         AssetDatabase.CreateAsset(pedMat, "Assets/Materials/Pedestrian.mat");
-        spawner.pedestrianMaterial = pedMat;
 
         var custMat = new Material(_cachedShader ?? Shader.Find("Universal Render Pipeline/Lit"));
         custMat.SetColor("_BaseColor", new Color(0.18f, 0.8f, 0.443f));
         AssetDatabase.CreateAsset(custMat, "Assets/Materials/Customer.mat");
-        spawner.customerMaterial = custMat;
+
+        spawner.SetMaterials(pedMat, custMat);
 
         AssetDatabase.SaveAssets();
         Debug.Log("[SceneSetup] AI Systems setup complete");
