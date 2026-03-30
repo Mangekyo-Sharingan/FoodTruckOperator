@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Day Tracking")]
     public int currentDay = 1;
-    public float dayDuration = 180f; // seconds per trading day
+    public float dayDuration = 900f; // seconds per trading day
 
     float _dayTimer;
     bool _dayActive;
@@ -41,6 +41,8 @@ public class GameManager : MonoBehaviour
     {
         _dayTimer = 0f;
         _dayActive = true;
+        Debug.Log($"[GameManager] Adding daily income for day {currentDay}... +100");
+        AddMoney(100); // Daily income
         Debug.Log($"[GameManager] Day {currentDay} started. You have ${money}.");
     }
 
@@ -50,6 +52,7 @@ public class GameManager : MonoBehaviour
         currentDay++;
         Debug.Log($"[GameManager] Day ended. Money: ${money}. Starting day {currentDay}...");
         // TODO: Show end-of-day summary, then call StartDay()
+        Start();
     }
 
     public void AddMoney(int amount)
