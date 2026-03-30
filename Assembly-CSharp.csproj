@@ -68,12 +68,16 @@
     <Compile Include="Assets\Scripts\GameUI.cs" />
     <Compile Include="Assets\Scripts\FoodTruck.cs" />
     <Compile Include="Assets\Scripts\PlayerController.cs" />
+    <Compile Include="Assets\Scripts\AISpawner.cs" />
     <Compile Include="Assets\Scripts\FoodTruckDriving.cs" />
     <Compile Include="Assets\Scripts\WeatherSystem.cs" />
+    <Compile Include="Assets\Scripts\PedestrianAI.cs" />
+    <Compile Include="Assets\Scripts\ServingHatch.cs" />
     <Compile Include="Assets\Scripts\IInteractable.cs" />
     <Compile Include="Assets\Scripts\InteractionSystem.cs" />
     <Compile Include="Assets\Scripts\ThirdPersonCamera.cs" />
-    <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
+    <Compile Include="Assets\Scripts\PlayerMovement.cs" />
+    <Compile Include="Assets\Scripts\CustomerAI.cs" />
     <Compile Include="Assets\Scripts\CityBuilder.cs" />
     <Compile Include="Assets\Scripts\GameManager.cs" />
   </ItemGroup>

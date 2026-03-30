@@ -64,11 +64,13 @@ public class CityBuilder : MonoBehaviour
 
     void BuildGround(float w, float d)
     {
-        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        // Cube gives a thick BoxCollider (two-sided, no fall-through risk).
+        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
         ground.name = "Ground";
         ground.transform.parent = transform;
-        ground.transform.localPosition = new Vector3(w / 2f - roadWidth / 2f, -0.01f, d / 2f - roadWidth / 2f);
-        ground.transform.localScale = new Vector3(w / 10f, 1f, d / 10f);
+        // Centre it under the city, sink half a unit so top surface sits at y=0.
+        ground.transform.localPosition = new Vector3(w / 2f - roadWidth / 2f, -0.5f, d / 2f - roadWidth / 2f);
+        ground.transform.localScale = new Vector3(w, 1f, d);
 
         Material mat = roadMaterial != null ? roadMaterial : CreateFlatMaterial(new Color(0.15f, 0.15f, 0.15f));
         ground.GetComponent<Renderer>().material = mat;
@@ -101,7 +103,6 @@ public class CityBuilder : MonoBehaviour
         road.transform.localPosition = pos;
         road.transform.localScale = new Vector3(sizeX, 0.05f, sizeZ);
         road.GetComponent<Renderer>().material = mat;
-        DestroyPoly(road.GetComponent<BoxCollider>());
     }
 
     void BuildBlocks(float cellSize)
@@ -162,7 +163,6 @@ public class CityBuilder : MonoBehaviour
             originX + blockSize / 2f, 0.03f, originZ + blockSize / 2f);
         sw.transform.localScale = new Vector3(blockSize, 0.06f, blockSize);
         sw.GetComponent<Renderer>().material = mat;
-        DestroyPoly(sw.GetComponent<BoxCollider>());
     }
 
     void CreateBuilding(float x, float y, float z,

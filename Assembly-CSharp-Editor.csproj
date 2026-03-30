@@ -64,7 +64,6 @@
     <Analyzer Include="A:\Projekt\Unity\FoodTruckOperator\Library\PackageCache\org.nuget.microsoft.codeanalysis.analyzers@bcf103d84432\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\TutorialInfo\Scripts\Editor\ReadmeEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\SceneSetupEditor.cs" />
   </ItemGroup>
   <ItemGroup>
