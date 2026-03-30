@@ -201,26 +201,30 @@
   
   If height/probability passes: create upper tier with reduced width/depth and elevated Y.
 
-- [ ] **Step 4: Add roof variants**
+- [ ] **Step 4: Add corner chamfer variant logic**
+  
+  Implement a lightweight corner chamfer silhouette option per plan/style (module-based 45-degree corner illusion, no custom mesh editing).
+
+- [ ] **Step 5: Add roof variants**
   
   Implement 3 roof modes:
   - flat parapet,
   - mechanical box cluster,
   - small pitched cap (simple primitive composition).
 
-- [ ] **Step 5: Add accent variants**
+- [ ] **Step 6: Add accent variants**
   
   Add optional awning strip / balcony band / signage plane (low-poly primitives only).
 
-- [ ] **Step 6: Respect collider policy**
+- [ ] **Step 7: Respect collider policy**
   
   Keep collider on base only by default; details use no collider unless `enableColliderOnDetails=true`.
 
-- [ ] **Step 7: Use optional block parent grouping**
+- [ ] **Step 8: Use optional block parent grouping**
   
   If `batchParentPerBlock`, create/reuse `Block_{bx}_{bz}` parent under city root.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
   
   Run:
   ```bash
@@ -310,7 +314,11 @@
   - Balanced: default  
   - High: denser modules + higher texture res (within caps)
 
-- [ ] **Step 3: Implement downgrade order exactly from spec**
+- [ ] **Step 3: Enforce occupied-building cap**
+  
+  Add explicit `maxOccupiedBuildings` enforcement in runtime build settings. Once cap is reached, stop creating new occupied building masses for remaining slots and log cap-hit in summary.
+
+- [ ] **Step 4: Implement downgrade order exactly from spec**
   
   On pressure/cap exceed:
   1) disable accents  
@@ -319,15 +327,15 @@
   4) reduce texture resolution  
   5) base mass + pooled flat material only
 
-- [ ] **Step 4: Add one aggregated downgrade warning**
+- [ ] **Step 5: Add one aggregated downgrade warning**
   
   Emit one summary warning at end of `Build()` if any downgrade triggered.
 
-- [ ] **Step 5: Keep per-building failures isolated**
+- [ ] **Step 6: Keep per-building failures isolated**
   
   Wrap each slot assembly in `try/catch`; log warning with block/cell/seed fragment and continue.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
   
   Run:
   ```bash
@@ -374,7 +382,15 @@
   
   Configure tiny caps (`maxGeneratedMaterials=1`, `maxGeneratedTextures=1`), build, assert no exception and buildings still generated.
 
-- [ ] **Step 6: Run EditMode tests**
+- [ ] **Step 6: Add forced texture-generation-failure fallback test**
+  
+  Add a test hook to simulate texture generation failure and assert city build completes with fallback materials and no thrown exceptions.
+
+- [ ] **Step 7: Add per-slot exception isolation test**
+  
+  Add a test hook to throw during one slot assembly and assert remaining slots still build, with warning recorded.
+
+- [ ] **Step 8: Run EditMode tests**
   
   Run:
   ```bash
@@ -382,7 +398,7 @@
   ```
   Expected: all `CityBuilderTests` pass.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
   
   Run:
   ```bash
@@ -419,15 +435,21 @@
   
   Rendering module + runtime counters/log summary:
   - renderers <= 1800,
+  - occupied buildings <= configured cap,
   - materials <= 24,
   - textures <= 18,
+  - generated texture memory <= 12 MB,
   - draw calls around/under target budget in representative views.
 
-- [ ] **Step 5: Verify no recurring post-build GC spikes**
+- [ ] **Step 5: Verify FPS budget and profile behavior**
+  
+  Confirm >= 60 FPS in representative gameplay camera after build stabilization, and verify Low/Balanced/High profiles visibly change detail level and measured cost in expected direction.
+
+- [ ] **Step 6: Verify no recurring post-build GC spikes**
   
   Profiler memory/GC timeline after city is built and camera idles for 10 seconds.
 
-- [ ] **Step 6: Final command-line regression**
+- [ ] **Step 7: Final command-line regression**
   
   Run:
   ```bash
@@ -435,7 +457,7 @@
   ```
   Expected: PASS (no regressions after tuning).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
   
   Run:
   ```bash
