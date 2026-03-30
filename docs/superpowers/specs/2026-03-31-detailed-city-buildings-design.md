@@ -156,7 +156,7 @@ If generation fails at any stage, subsystem must degrade gracefully and still pr
 - If block/cell computation yields non-positive usable area, skip building for that slot.
 
 ### Runtime Fallbacks
-- **Shader not found:** fall back to URP Lit lookup path already used; if unavailable, use Standard as last safety.
+- **Shader not found:** retry URP Lit lookup; if still unavailable, reuse an existing known-good URP material from the city build pass; if no URP material exists yet, create a minimal `Unlit/Color` fallback material and continue.
 - **Texture generation failure:** use flat color materials from style palette.
 - **Material cap reached:** reuse nearest matching pooled material.
 - **Performance cap reached mid-build:** disable optional modules for remaining buildings (base mass only + simple roof).
@@ -220,6 +220,12 @@ The subsystem is accepted when all criteria are true:
 - [ ] Verify draw call budget in representative camera positions.
 - [ ] Confirm no continuous GC spikes after build completion.
 - [ ] Validate quality profile switches (Low/Balanced/High) change cost/detail predictably.
+
+### Profiling Method (for consistency)
+- Use Unity Profiler (CPU + Rendering modules) in Play Mode, attach to Editor target.
+- Measure `CityBuilder.Build()` using a `ProfilerMarker` around the build call and capture 3 runs with different seeds.
+- Read draw calls from Profiler Rendering module while camera is at default spawn and one elevated overview position.
+- Measure FPS using Unity Stats in Game view after build stabilization for at least 10 seconds.
 
 ### Robustness Verification
 - [ ] Invalid parameter combinations clamp safely and still build city.
