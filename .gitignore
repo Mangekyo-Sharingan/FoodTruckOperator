@@ -53,6 +53,8 @@ UserSettings/
 UpgradeLog.htm
 
 # AI/Agent Tools (do not commit)
+/docs
+docs/
 .mcp.json
 CLAUDE.md
 opencode.json
