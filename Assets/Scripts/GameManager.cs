@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Day Tracking")]
     public int currentDay = 1;
-    public float dayDurationMinutes = 1f; // minutes per selling day
+    public float dayDurationMinutes = 10f; // minutes per selling day
 
     // Per-day economy tracking
     public int DayMoneyEarned { get; private set; }
@@ -22,7 +22,7 @@ public class GameManager : MonoBehaviour
     bool _dayActive;
     bool _dayEndedPending; // waiting for UI to dismiss before starting next day
 
-    float DayDurationSeconds => dayDurationMinutes * 10f;
+    float DayDurationSeconds => dayDurationMinutes * 60f;
 
     public bool DayActive => _dayActive;
     /// <summary>Minutes elapsed so far this day.</summary>
