@@ -212,14 +212,9 @@ public static class SceneSetupEditor
         MakePart("WindowFrameR",    ext.transform, new Vector3(1.70f, 2.10f,  0.43f), new Vector3(0.04f, 0.82f, 0.06f), chromeMat);
         MakePart("WindowLedge",     ext.transform, new Vector3(1.85f, 1.72f, -0.8f), new Vector3(0.30f, 0.06f, 2.40f), metalMat);
 
-        // Serving hatch — pivot at top edge of window
-        var hatchPivotGO = new GameObject("ServingHatchPivot");
-        hatchPivotGO.transform.SetParent(ext.transform);
-        hatchPivotGO.transform.localPosition = new Vector3(1.72f, 2.46f, -0.8f);
-        hatchPivotGO.transform.localRotation = Quaternion.identity;
-        hatchPivotGO.AddComponent<ServingHatch>();
-        MakePart("HatchPanel", hatchPivotGO.transform,
-            new Vector3(0f, -0.37f, 0f), new Vector3(0.04f, 0.74f, 2.40f), windowMat);
+        // Serving hatch — static visual panel (no runtime component)
+        MakePart("HatchPanel", ext.transform,
+            new Vector3(1.72f, 2.09f, -0.8f), new Vector3(0.04f, 0.74f, 2.40f), windowMat);
 
         // Rear face
         MakePart("CargoRear",       ext.transform, new Vector3( 0f,    1.65f, -4.52f), new Vector3(3.30f, 2.70f, 0.06f), bodyMat);
