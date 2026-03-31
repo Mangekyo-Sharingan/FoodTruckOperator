@@ -8,18 +8,22 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance { get; private set; }
 
     [Header("Economy")]
-    public int money = 200;
+    public int money = 1000;
 
     [Header("Day Tracking")]
     public int currentDay = 1;
-    public float dayDuration = 900f; // seconds per trading day
+    public float dayDurationMinutes = 15f; // minutes per selling day
 
-    float _dayTimer;
+    float _dayTimer; // seconds elapsed this day
     bool _dayActive;
 
+    float DayDurationSeconds => dayDurationMinutes * 60f;
+
     public bool DayActive => _dayActive;
-    public float DayTimeRemaining => Mathf.Max(0f, dayDuration - _dayTimer);
-    public float DayProgress => Mathf.Clamp01(_dayTimer / dayDuration);
+    /// <summary>Minutes elapsed so far this day.</summary>
+    public float DayTimeElapsed => _dayTimer / 60f;
+    /// <summary>0→1 progress through the day.</summary>
+    public float DayProgress => Mathf.Clamp01(_dayTimer / DayDurationSeconds);
 
     void Awake()
     {
@@ -34,25 +38,30 @@ public class GameManager : MonoBehaviour
     {
         if (!_dayActive) return;
         _dayTimer += Time.deltaTime;
-        if (_dayTimer >= dayDuration) EndDay();
+        if (_dayTimer >= DayDurationSeconds) EndDay();
     }
 
     public void StartDay()
     {
         _dayTimer = 0f;
         _dayActive = true;
-        Debug.Log($"[GameManager] Adding daily income for day {currentDay}... +100");
-        AddMoney(100); // Daily income
+        if (currentDay >= 2)
+        {
+            Debug.Log($"[GameManager] Adding daily government benefits for day {currentDay}... +100");
+            AddMoney(100);
+        }
         Debug.Log($"[GameManager] Day {currentDay} started. You have ${money}.");
     }
 
     public void EndDay()
     {
         _dayActive = false;
-        currentDay++;
+        currentDay += 1;
         Debug.Log($"[GameManager] Day ended. Money: ${money}. Starting day {currentDay}...");
         // TODO: Show end-of-day summary, then call StartDay()
-        Start();
+        Debug.Log($"[GameManager] Simulating end-of-day summary... (TODO: Implement UI summary screen)");
+        Debug.Log($"Starting next day...");
+        StartDay();
     }
 
     public void AddMoney(int amount)

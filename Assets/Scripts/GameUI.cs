@@ -21,11 +21,6 @@ public class GameUI : MonoBehaviour
         Debug.Log("[GameUI] Component enabled: " + enabled);
     }
 
-    void Update()
-    {
-        Debug.Log("[GameUI] Update running - UI should display!");
-    }
-
     void Awake()
     {
         Debug.Log("[GameUI] Awake called - GameUI initializing");
@@ -52,12 +47,14 @@ public class GameUI : MonoBehaviour
             return;
         }
 
-        float timeRemaining = GameManager.Instance.DayTimeRemaining;
-        int minutes = Mathf.FloorToInt(timeRemaining / 60f);
-        int seconds = Mathf.FloorToInt(timeRemaining % 60f);
-        string timeStr = $"{minutes:0}:{seconds:00}";
+        float elapsed = GameManager.Instance.DayTimeElapsed;       // minutes elapsed
+        float total   = GameManager.Instance.dayDurationMinutes;   // total minutes
+        int elapsedMin = Mathf.FloorToInt(elapsed);
+        int elapsedSec = Mathf.FloorToInt((elapsed - elapsedMin) * 60f);
+        int totalMin   = Mathf.FloorToInt(total);
+        string timeStr = $"{elapsedMin}:{elapsedSec:00} / {totalMin} min";
 
-        string label = $"Day {GameManager.Instance.currentDay}  |  ${GameManager.Instance.money}  |  Time: {timeStr}";
+        string label = $"Day {GameManager.Instance.currentDay}  |  ${GameManager.Instance.money}  |  {timeStr}";
 
         float labelHeight = fontSize * 1.5f;
         float labelWidth = 350f;

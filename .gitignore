@@ -6,6 +6,12 @@
 [Bb]uilds/
 Assets/External/
 Assets/Plugins/Editor/
+Assets/scene1.unity
+Assets/scene1
+Assets/scene1.meta
+Assets/scene1.unity
+Assets/*.meta
+Assets/*.unity
 
 # VS
 .vs/
@@ -54,3 +60,6 @@ opencode.json
 .opencode/
 .wolf/
 .worktrees/
+Assets/scene1.unity
+Assets/scene1/NavMesh.asset
+Assets/Scenes/CityScene.unity
