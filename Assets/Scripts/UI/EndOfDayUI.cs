@@ -6,7 +6,9 @@ using TMPro;
 /// <summary>
 /// End-of-Day summary popup.
 /// Assign references via the Inspector (panel, texts, button).
-/// GameManager.EndDay() calls Show(); the Continue button calls Dismiss().
+/// GameManager.EndDay() calls Show(); the Continue button (or Space) calls Dismiss().
+/// Visibility is controlled by enabling/disabling the Canvas component so nothing
+/// renders when hidden, while the GameObject stays active for FindObjectOfType.
 /// </summary>
 public class EndOfDayUI : MonoBehaviour
 {
@@ -25,13 +27,14 @@ public class EndOfDayUI : MonoBehaviour
     [Header("Fade")]
     public float fadeDuration = 0.5f;
 
+    Canvas _canvas;
     bool _isVisible;
 
     void Awake()
     {
-        if (canvasGroup == null) canvasGroup = GetComponentInChildren<CanvasGroup>();
+        _canvas = GetComponent<Canvas>();
+        if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
         continueButton?.onClick.AddListener(Dismiss);
-        // Start hidden via CanvasGroup — do NOT deactivate the GameObject
         SetVisible(false);
     }
 
@@ -59,9 +62,7 @@ public class EndOfDayUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible   = true;
 
-        _isVisible                 = true;
-        canvasGroup.interactable   = true;
-        canvasGroup.blocksRaycasts = true;
+        SetVisible(true);
         StopAllCoroutines();
         StartCoroutine(Fade(0f, 1f, fadeDuration));
     }
@@ -69,6 +70,7 @@ public class EndOfDayUI : MonoBehaviour
     /// <summary>Fade the panel out, then tell GameManager to proceed.</summary>
     public void Dismiss()
     {
+        if (!_isVisible) return;
         continueButton.interactable = false;
         StopAllCoroutines();
         StartCoroutine(FadeOutAndContinue());
@@ -101,9 +103,9 @@ public class EndOfDayUI : MonoBehaviour
 
     void SetVisible(bool visible)
     {
-        _isVisible                 = visible;
-        canvasGroup.alpha          = visible ? 1f : 0f;
-        canvasGroup.interactable   = visible;
+        _isVisible               = visible;
+        _canvas.enabled          = visible; // disabling Canvas stops all rendering, no grey overlay
+        canvasGroup.interactable = visible;
         canvasGroup.blocksRaycasts = visible;
     }
 }

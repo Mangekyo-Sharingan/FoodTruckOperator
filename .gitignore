@@ -65,6 +65,16 @@ ProjectSettings/PackageManagerSettings.asset
 .plastic/
 Assets/TextMesh Pro/
 ProjectSettings/PackageManagerSettings.asset
-ProjectSettings/EditorBuildSettings.asset
 Assets/TextMesh Pro.meta
 ignore.conf
+Assets/packages-merged-link.meta
+Assets/Resources.meta
+Assets/packages-merged-link/link.xml
+Assets/Resources/*
+ProjectSettings/*
+ProjectSettings/UnityConnectSettings.asset
+Assets/packages-merged-link/link.xml.meta
+Assets/Scenes/CityScene.unity
+ProjectSettings/UnityConnectSettings.asset
+ProjectSettings/EditorBuildSettings.asset
+docs/
