@@ -12,6 +12,8 @@ Assets/scene1.meta
 Assets/scene1.unity
 Assets/*.meta
 Assets/*.unity
+Assets/Scenes/*.unity
+Assets/Scenes/*.meta
 
 # VS
 .vs/
@@ -51,3 +53,13 @@ UserSettings/
 
 # Upgrade
 UpgradeLog.htm
+.mcp.json
+CLAUDE.md
+opencode.json
+settings.json
+settings.local.json
+.claude/
+.opencode/
+.openwolf/
+.wolf/
+.worktrees/
