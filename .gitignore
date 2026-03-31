@@ -54,7 +54,7 @@ UpgradeLog.htm
 
 # AI/Agent Tools (do not commit)
 /docs
-docs/
+docs/superpowers
 .mcp.json
 CLAUDE.md
 opencode.json
