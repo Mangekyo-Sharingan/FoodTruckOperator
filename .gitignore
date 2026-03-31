@@ -6,15 +6,7 @@
 [Bb]uilds/
 Assets/External/
 Assets/Plugins/Editor/
-Assets/scene1.unity
-Assets/scene1
-Assets/scene1.meta
-Assets/scene1.unity
-Assets/*.meta
-Assets/*.unity
-Assets/Scenes/*.unity
-Assets/Scenes/*.meta
-
+Assets/Scenes/
 # VS
 .vs/
 *.suo
