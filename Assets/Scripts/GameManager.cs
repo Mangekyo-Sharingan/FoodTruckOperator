@@ -12,12 +12,17 @@ public class GameManager : MonoBehaviour
 
     [Header("Day Tracking")]
     public int currentDay = 1;
-    public float dayDurationMinutes = 15f; // minutes per selling day
+    public float dayDurationMinutes = 1f; // minutes per selling day
+
+    // Per-day economy tracking
+    public int DayMoneyEarned { get; private set; }
+    public int DayMoneySpent  { get; private set; }
 
     float _dayTimer; // seconds elapsed this day
     bool _dayActive;
+    bool _dayEndedPending; // waiting for UI to dismiss before starting next day
 
-    float DayDurationSeconds => dayDurationMinutes * 60f;
+    float DayDurationSeconds => dayDurationMinutes * 10f;
 
     public bool DayActive => _dayActive;
     /// <summary>Minutes elapsed so far this day.</summary>
@@ -45,6 +50,10 @@ public class GameManager : MonoBehaviour
     {
         _dayTimer = 0f;
         _dayActive = true;
+        _dayEndedPending = false;
+        DayMoneyEarned = 0;
+        DayMoneySpent  = 0;
+
         if (currentDay >= 2)
         {
             Debug.Log($"[GameManager] Adding daily government benefits for day {currentDay}... +100");
@@ -55,18 +64,30 @@ public class GameManager : MonoBehaviour
 
     public void EndDay()
     {
+        if (_dayEndedPending) return; // guard against double-trigger
         _dayActive = false;
+        _dayEndedPending = true;
         currentDay += 1;
-        Debug.Log($"[GameManager] Day ended. Money: ${money}. Starting day {currentDay}...");
-        // TODO: Show end-of-day summary, then call StartDay()
-        Debug.Log($"[GameManager] Simulating end-of-day summary... (TODO: Implement UI summary screen)");
-        Debug.Log($"Starting next day...");
+        Debug.Log($"[GameManager] Day ended. Earned: ${DayMoneyEarned}  Spent: ${DayMoneySpent}  Balance: ${money}");
+
+        // Show the end-of-day summary UI; it will call ContinueToNextDay() when dismissed.
+        EndOfDayUI ui = FindObjectOfType<EndOfDayUI>();
+        if (ui != null)
+            ui.Show(DayMoneyEarned, DayMoneySpent);
+        else
+            ContinueToNextDay(); // fallback if no UI present
+    }
+
+    /// <summary>Called by EndOfDayUI after the player dismisses the summary.</summary>
+    public void ContinueToNextDay()
+    {
         StartDay();
     }
 
     public void AddMoney(int amount)
     {
         money += amount;
+        if (_dayActive && amount > 0) DayMoneyEarned += amount;
         Debug.Log($"[GameManager] +${amount} → Total: ${money}");
     }
 
@@ -74,6 +95,7 @@ public class GameManager : MonoBehaviour
     {
         if (money < amount) return false;
         money -= amount;
+        if (_dayActive) DayMoneySpent += amount;
         return true;
     }
 }

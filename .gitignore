@@ -55,3 +55,16 @@ settings.local.json
 .openwolf/
 .wolf/
 .worktrees/
+
+Asseys/com.IvanMurzak
+Assets/Adaptive Performance/*
+Assets/Scenes/CityScene.unity
+Assets/Adaptive Performance.meta
+ProjectSettings/EditorBuildSettings.asset
+ProjectSettings/PackageManagerSettings.asset
+.plastic/
+Assets/TextMesh Pro/
+ProjectSettings/PackageManagerSettings.asset
+ProjectSettings/EditorBuildSettings.asset
+Assets/TextMesh Pro.meta
+ignore.conf

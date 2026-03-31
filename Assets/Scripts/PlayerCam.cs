@@ -31,8 +31,8 @@ public class PlayerCam : MonoBehaviour
         orientation.rotation = Quaternion.Euler(0f, yRotation, 0f);
 
         // ===== DEBUG =====
-        Debug.Log($"MouseX: {mouseX}, MouseY: {mouseY}");
-        Debug.Log($"X Rotation (pitch): {xRotation}, Y Rotation (yaw): {yRotation}");
+        //Debug.Log($"MouseX: {mouseX}, MouseY: {mouseY}");
+        //Debug.Log($"X Rotation (pitch): {xRotation}, Y Rotation (yaw): {yRotation}");
     }
 
 }
